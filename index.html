@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votación Mágica de Ideas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            margin: 0;
+            overflow: hidden;
+            background-color: #7dd3fc;
+            background-image: radial-gradient(circle at 50% 50%, #bae6fd 0%, #38bdf8 100%);
+            touch-action: none;
+        }
+
+        /* Estilo Botones 3D Caricatura */
+        .btn-comic {
+            border: 4px solid #1e293b;
+            box-shadow: 4px 6px 0px #1e293b;
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-comic:active {
+            transform: translate(4px, 6px);
+            box-shadow: 0px 0px 0px #1e293b;
+        }
+        .btn-comic:disabled {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 4px 6px 0px #1e293b;
+        }
+
+        /* --- FASE 1: PEGATINAS FLOTANTES --- */
+        .sticker-card {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 32px;
+            font-weight: 800;
+            color: #1e293b;
+            border: 5px solid #1e293b;
+            box-shadow: 6px 8px 0px rgba(0, 0, 0, 0.2);
+            user-select: none;
+            z-index: 10;
+        }
+        
+        .sticker-emoji {
+            filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.15));
+            font-size: 45px;
+        }
+
+        @keyframes popInComic {
+            0% { transform: scale(0) rotate(-15deg); opacity: 0; }
+            60% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: popInComic 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* --- FASE 2: TARJETAS DE VOTACIÓN 3D --- */
+        .vote-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            border-radius: 40px;
+            padding: 25px 20px;
+            border: 6px solid #1e293b;
+            box-shadow: 8px 10px 0px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: transform 0.15s;
+            position: relative;
+        }
+        .vote-card:active {
+            transform: translate(4px, 5px);
+            box-shadow: 4px 5px 0px rgba(0,0,0,0.15);
+        }
+        .vote-count {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            background-color: #fbbf24;
+            color: #b45309;
+            width: 75px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 38px;
+            font-weight: 900;
+            border: 5px solid #1e293b;
+            box-shadow: 4px 4px 0px #1e293b;
+            transform-origin: center;
+        }
+
+        @keyframes voteBumpComic {
+            0% { transform: scale(1); background-color: white; }
+            50% { transform: scale(1.1) rotate(3deg); background-color: #fef08a; }
+            100% { transform: scale(1); background-color: white; }
+        }
+        .bump {
+            animation: voteBumpComic 0.4s ease-out;
+        }
+        
+        @keyframes counterBumpComic {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5) rotate(15deg); background-color: #fcd34d; }
+            100% { transform: scale(1); }
+        }
+        .counter-bump {
+            animation: counterBumpComic 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* --- FASE 3: GANADOR SUPER ESTRELLA --- */
+        .winner-display {
+            background-color: #fde047;
+            color: #92400e;
+            border: 10px solid #1e293b;
+            box-shadow: 15px 20px 0px rgba(0,0,0,0.2);
+            border-radius: 60px;
+            position: relative;
+        }
+        .confetti-bg {
+            background-image: 
+                radial-gradient(circle at 20% 30%, #fca5a5 10px, transparent 11px),
+                radial-gradient(circle at 80% 20%, #86efac 12px, transparent 13px),
+                radial-gradient(circle at 40% 80%, #fef08a 15px, transparent 16px),
+                radial-gradient(circle at 70% 70%, #c4b5fd 10px, transparent 11px),
+                radial-gradient(circle at 50% 50%, #fcd34d 0%, #fb923c 100%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+        }
+        
+        /* Indicador de que el micro está escuchando */
+        @keyframes micPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .mic-active-pulse {
+            border-color: #b91c1c !important;
+            animation: micPulse 1.5s infinite;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col text-slate-800">
+
+    <!-- PANTALLA DE INICIO (SPLASH SCREEN) -->
+    <div id="splash-screen" class="fixed inset-0 bg-sky-300 bg-[radial-gradient(circle_at_50%_50%,#bae6fd_0%,#38bdf8_100%)] z-[200] flex flex-col items-center justify-center p-6 text-center">
+        <div class="bg-white rounded-[50px] p-8 md:p-12 max-w-2xl border-8 border-slate-800 shadow-[12px_16px_0px_rgba(0,0,0,0.25)] flex flex-col items-center animate-pop-in">
+            <span class="text-8xl md:text-9xl mb-6 animate-bounce" style="filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.2));">🧠✨</span>
+            <h1 class="text-5xl md:text-7xl font-black text-blue-600 mb-4 tracking-wide" style="-webkit-text-stroke: 3px #1e293b; color: white; text-shadow: 5px 5px 0px #1e293b;">
+                LLUVIA DE IDEAS
+            </h1>
+            <p class="text-2xl md:text-3xl text-slate-700 font-bold mb-8">
+                ¡Activa e inicia tu lluvia de ideas mágica para el aula!
+            </p>
+            <button onclick="startAppFromSplash()" class="btn-comic bg-emerald-400 text-slate-900 font-black py-4 px-12 rounded-full text-3xl md:text-4xl flex items-center gap-4">
+                <span>🚀</span> ¡INICIAR AHORA!
+            </button>
+        </div>
+    </div>
+
+    <header class="bg-white p-5 flex flex-col md:flex-row justify-between items-center z-50 border-b-8 border-slate-800 shadow-xl" id="main-header">
+        <div class="flex items-center gap-4 mb-4 md:mb-0">
+            <span id="phase-icon" class="text-6xl animate-bounce" style="filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.2));">🧠</span>
+            <h1 id="phase-title" class="text-4xl md:text-5xl font-black text-blue-600 tracking-wide" style="-webkit-text-stroke: 2px #1e293b; color: white; text-shadow: 4px 4px 0px #1e293b;">IDEAS GENIALES</h1>
+        </div>
+        
+        <div class="flex flex-wrap justify-center gap-4">
+            <button id="btn-mic" class="btn-comic bg-rose-500 text-white font-bold py-3 px-8 rounded-full text-2xl flex items-center gap-3">
+                <span id="mic-icon" class="text-3xl">🎤</span>
+                <span id="mic-text">DIME IDEAS</span>
+            </button>
+            
+            <button id="btn-next-phase" class="btn-comic bg-emerald-400 text-slate-900 font-bold py-3 px-8 rounded-full text-2xl flex items-center gap-3">
+                <span>➡️</span> A VOTAR
+            </button>
+
+            <!-- BOTÓN: ELEGIR AL AZAR -->
+            <button id="btn-random-winner" class="btn-comic bg-purple-500 text-white font-bold py-3 px-8 rounded-full text-2xl flex items-center gap-3">
+                <span>🎲</span> AL AZAR
+            </button>
+        </div>
+    </header>
+
+    <div id="status-bar" class="bg-blue-600 text-white text-center py-3 font-bold text-2xl z-40 border-b-4 border-slate-800 shadow-md">
+        FASE 1: Enciende el micro y dime tus ideas.
+    </div>
+
+    <!-- FASE 1 -->
+    <main id="phase1-container" class="flex-1 relative w-full h-full block">
+        <!-- Pegatinas aquí -->
+    </main>
+
+    <!-- FASE 2 -->
+    <main id="phase2-container" class="flex-1 relative w-full h-full p-8 hidden overflow-y-auto">
+        <div id="voting-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 max-w-7xl mx-auto pb-24 mt-8">
+            <!-- Tarjetas de voto aquí -->
+        </div>
+    </main>
+
+    <!-- FASE 3 -->
+    <main id="phase3-container" class="flex-1 relative w-full h-full hidden items-center justify-center flex-col p-4">
+        <h2 class="text-5xl md:text-7xl font-black text-white mb-12" style="-webkit-text-stroke: 3px #1e293b; text-shadow: 6px 6px 0px #1e293b;">¡EL GANADOR ES!</h2>
+        
+        <div id="winner-card" class="winner-display flex flex-col items-center justify-center p-16 mb-12 transform transition-all duration-[800ms] scale-0 opacity-0 rotate-12">
+            <span id="winner-emoji" class="text-8xl md:text-[180px] mb-8" style="filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.2));">🏆</span>
+            <span id="winner-text" class="text-6xl md:text-8xl font-black text-center uppercase tracking-wider" style="-webkit-text-stroke: 2px #fff;"></span>
+            <div class="absolute -bottom-8 bg-orange-500 text-white px-8 py-3 rounded-full text-4xl font-black border-6 border-slate-800 shadow-[4px_6px_0px_#1e293b]">
+                <span id="winner-votes"></span>
+            </div>
+        </div>
+
+        <button onclick="resetApp()" class="btn-comic bg-cyan-400 text-slate-900 font-black py-4 px-12 rounded-full text-3xl flex items-center gap-3 mt-8">
+            <span>🔄</span> ¡JUGAR OTRA VEZ!
+        </button>
+    </main>
+
+    <!-- Modal de Alerta Caricaturesco -->
+    <div id="message-box" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center z-[100] backdrop-blur-sm">
+        <div class="bg-white rounded-[40px] p-10 max-w-lg text-center border-8 border-slate-800 shadow-[10px_15px_0px_rgba(0,0,0,0.5)] transform scale-100">
+            <div class="text-8xl mb-6 animate-bounce">🙈</div>
+            <h2 id="message-title" class="text-5xl font-black text-rose-500 mb-4" style="-webkit-text-stroke: 2px #1e293b; color: white; text-shadow: 3px 4px 0px #1e293b;">¡ATENCIÓN!</h2>
+            <p id="message-text" class="text-slate-700 mb-8 font-bold text-2xl">Mensaje.</p>
+            <button onclick="closeMessage()" class="btn-comic bg-emerald-400 text-slate-900 font-bold py-3 px-12 rounded-full text-2xl">
+                ¡VALE!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function startAppFromSplash() {
+            const splash = document.getElementById('splash-screen');
+            splash.classList.add('transition-opacity', 'duration-500', 'opacity-0');
+            
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 500);
+
+            if (!isListening) {
+                toggleMicrophone();
+            }
+        }
+
+        const emojiData = {
+            // Animales
+            "perro": "🐶", "perrito": "🐶", "gato": "🐱", "gatito": "🐱", "raton": "🐭",
+            "conejo": "🐰", "zorro": "🦊", "oso": "🐻", "panda": "🐼", "koala": "🐨",
+            "tigre": "🐯", "leon": "🦁", "vaca": "🐮", "cerdo": "🐷", "rana": "🐸",
+            "mono": "🐵", "pollo": "🐔", "pajaro": "🐦", "pinguino": "🐧", "pato": "🦆",
+            "buho": "🦉", "murcielago": "🦇", "lobo": "🐺", "jabali": "🐗", "caballo": "🐴",
+            "unicornio": "🦄", "abeja": "🐝", "gusano": "🐛", "mariposa": "🦋", "caracol": "🐌",
+            "escarabajo": "🐞", "hormiga": "🐜", "mosquito": "🦟", "grillo": "🦗", "araña": "🕷️",
+            "tortuga": "🐢", "serpiente": "🐍", "dinosaurio": "🦖", "t-rex": "🦖", "dragon": "🐉",
+            "pulpo": "🐙", "calamar": "🦑", "langosta": "🦞", "cangrejo": "🦀", "pez": "🐟",
+            "tiburon": "🦈", "ballena": "🐳", "delfin": "🐬",
+            
+            // Naturaleza
+            "arbol": "🌳", "bosque": "🌲", "palmera": "🌴", "cactus": "🌵", "flor": "🌸",
+            "rosa": "🌹", "girasol": "🌻", "hoja": "🍂", "hongo": "🍄", "champiñon": "🍄",
+            "agua": "💧", "fuego": "🔥", "viento": "💨", "tierra": "🌍", "sol": "☀️",
+            "luna": "🌙", "estrella": "⭐", "nube": "☁️", "lluvia": "🌧️", "nieve": "❄️",
+            "rayo": "⚡", "arcoiris": "🌈",
+            
+            // Comida
+            "manzana": "🍎", "pera": "🍐", "naranja": "🍊", "limon": "🍋", "platano": "🍌",
+            "sandia": "🍉", "uva": "🍇", "fresa": "🍓", "fruta": "🍓", "melon": "🍈",
+            "cereza": "🍒", "durazno": "🍑", "mango": "🥭", "pina": "🍍", "coco": "🥥",
+            "tomate": "🍅", "zanahoria": "🥕", "maiz": "🌽", "papa": "🥔", "cebolla": "🧅",
+            "pan": "🍞", "queso": "🧀", "huevo": "🥚", "hamburguesa": "🍔", "pizza": "🍕",
+            "hotdog": "🌭", "completo": "🌭", "taco": "🌮", "burrito": "🌯", "ensalada": "🥗",
+            "palomitas": "🍿", "arroz": "🍚", "fideos": "🍜", "pasta": "🍝", "sopa": "🍲",
+            "helado": "🍦", "dulce": "🍬", "caramelo": "🍬", "chocolate": "🍫", "galleta": "🍪",
+            "pastel": "🎂", "torta": "🎂", "jugo": "🧃", "leche": "🥛",
+            
+            // Escuela, Juegos y Objetos
+            "colegio": "🏫", "escuela": "🏫", "libro": "📖", "cuaderno": "📓", "lapiz": "✏️",
+            "colores": "🎨", "pintar": "🎨", "mochila": "🎒", "computadora": "💻", "tablet": "📱",
+            "telefono": "📱", "celular": "📱", "reloj": "⌚", "jugar": "🎮", "videojuego": "🎮",
+            "pelota": "⚽", "futbol": "⚽", "basquetbol": "🏀", "tenis": "🎾", "juguete": "🧸",
+            "oso de peluche": "🧸", "muñeca": "🎎", "auto": "🚗", "coche": "🚗", "carro": "🚗",
+            "bus": "🚌", "micro": "🚌", "tren": "🚂", "avion": "✈️", "cohete": "🚀",
+            "barco": "⛵", "bicicleta": "🚲", "musica": "🎵", "cancion": "🎵", "cantar": "🎤",
+            "guitarra": "🎸", "tambor": "🥁", "bailar": "💃", "fiesta": "🎉", "magia": "✨"
+        };
+
+        const borderColors = ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4'];
+
+        let currentPhase = 1;
+        let wordsData = [];
+        let nextWordId = 0;
+        let animationFrameId;
+
+        const phase1 = document.getElementById('phase1-container');
+        const phase2 = document.getElementById('phase2-container');
+        const phase3 = document.getElementById('phase3-container');
+        const btnNextPhase = document.getElementById('btn-next-phase');
+        const statusBar = document.getElementById('status-bar');
+
+        function normalizeText(text) {
+            return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        }
+
+        function getEmojiForWord(text) {
+            const cleanText = normalizeText(text);
+            for (const [key, emoji] of Object.entries(emojiData)) {
+                if (cleanText.includes(key)) return emoji;
+            }
+            return "🌟";
+        }
+
+        let isListening = false;
+        let recognition;
+        const btnMic = document.getElementById('btn-mic');
+        const micIcon = document.getElementById('mic-icon');
+        const micText = document.getElementById('mic-text');
+
+        function initSpeechRecognition() {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!window.SpeechRecognition) {
+                showMessage("¡OOPS!", "Tu navegador necesita magia. Usa Google Chrome o Edge en un PC para que funcione el micrófono.");
+                return false;
+            }
+            
+            recognition = new SpeechRecognition();
+            recognition.continuous = true; 
+            recognition.interimResults = false; 
+            recognition.lang = 'es-ES'; 
+            
+            recognition.onresult = function(event) {
+                const lastResult = event.results[event.results.length - 1];
+                if (lastResult.isFinal) {
+                    const transcript = lastResult[0].transcript.trim();
+                    if (transcript.length > 0) {
+                        handleVoiceInput(transcript);
+                    }
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                console.log("Mic error:", event.error);
+                if (event.error === 'not-allowed') {
+                    showMessage("SIN PERMISO", "¡Debes permitir usar el micrófono en tu navegador!");
+                    stopListening();
+                }
+            };
+
+            recognition.onend = function() {
+                if (isListening) {
+                    console.log("El navegador pausó el micro. Reiniciando...");
+                    setTimeout(() => {
+                        if(isListening) {
+                            try { recognition.start(); } 
+                            catch(e) { console.log("Reintento fallido", e); }
+                        }
+                    }, 250);
+                }
+            };
+            
+            return true;
+        }
+
+        function toggleMicrophone() {
+            if (!recognition && !initSpeechRecognition()) return;
+            if (isListening) stopListening();
+            else startListening();
+        }
+
+        function startListening() {
+            try {
+                recognition.start();
+                isListening = true;
+                
+                btnMic.classList.replace('bg-rose-500', 'bg-red-600');
+                btnMic.classList.add('mic-active-pulse');
+                micText.innerText = 'ESCUCHANDO...';
+                micIcon.innerText = '🔴';
+            } catch (error) {
+            }
+        }
+
+        function stopListening() {
+            isListening = false; 
+            try { recognition.stop(); } catch(e){}
+            
+            btnMic.classList.replace('bg-red-600', 'bg-rose-500');
+            btnMic.classList.remove('mic-active-pulse');
+            micText.innerText = 'DIME IDEAS';
+            micIcon.innerText = '🎤';
+        }
+
+        function handleVoiceInput(transcript) {
+            console.log("Escuchado:", transcript);
+            if (currentPhase === 1) {
+                addIdea(transcript);
+            } else if (currentPhase === 2) {
+                checkVoteMatchIntelligent(transcript);
+            }
+        }
+
+        function addIdea(text) {
+            const cleanComparison = normalizeText(text);
+            
+            if (cleanComparison === "" || cleanComparison.split(" ").length > 3) return;
+            if(wordsData.some(w => w.cleanText === cleanComparison)) return;
+
+            const emoji = getEmojiForWord(text);
+            const displayWord = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+            
+            const card = document.createElement('div');
+            card.className = 'sticker-card animate-pop-in';
+            card.innerHTML = `<span class="sticker-emoji">${emoji}</span> <span>${displayWord}</span>`;
+            
+            const randColor = borderColors[Math.floor(Math.random() * borderColors.length)];
+            card.style.borderColor = randColor;
+            
+            phase1.appendChild(card);
+            
+            const boardRect = phase1.getBoundingClientRect();
+            
+            const wordObj = {
+                id: nextWordId++,
+                text: displayWord,
+                cleanText: cleanComparison,
+                emoji: emoji,
+                color: randColor,
+                votes: 0,
+                el: card,
+                x: boardRect.width / 2 - 80,
+                y: boardRect.height / 2 - 40,
+                vx: (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 3),
+                vy: (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 3),
+                width: 0,
+                height: 0
+            };
+            
+            setTimeout(() => {
+                const rect = card.getBoundingClientRect();
+                wordObj.width = rect.width;
+                wordObj.height = rect.height;
+                card.classList.remove('animate-pop-in');
+            }, 600);
+
+            wordsData.push(wordObj);
+
+            if (!animationFrameId) physicsLoop();
+        }
+
+        function physicsLoop() {
+            if (currentPhase !== 1) return;
+
+            const boardRect = phase1.getBoundingClientRect();
+            
+            wordsData.forEach(word => {
+                if(word.width === 0) return; 
+                
+                word.x += word.vx;
+                word.y += word.vy;
+                
+                if (word.x <= 0) {
+                    word.x = 0; word.vx *= -1;
+                } else if (word.x + word.width >= boardRect.width) {
+                    word.x = boardRect.width - word.width; word.vx *= -1;
+                }
+                
+                if (word.y <= 0) {
+                    word.y = 0; word.vy *= -1;
+                } else if (word.y + word.height >= boardRect.height) {
+                    word.y = boardRect.height - word.height; word.vy *= -1;
+                }
+                
+                word.el.style.transform = `translate(${word.x}px, ${word.y}px)`;
+            });
+            
+            animationFrameId = requestAnimationFrame(physicsLoop);
+        }
+
+        function renderVotingGrid() {
+            const grid = document.getElementById('voting-grid');
+            grid.innerHTML = '';
+            
+            wordsData.forEach(word => {
+                const card = document.createElement('div');
+                card.className = 'vote-card';
+                card.id = `vote-card-${word.id}`;
+                card.style.borderColor = word.color;
+                
+                card.onclick = () => registerVote(word.id);
+                
+                card.innerHTML = `
+                    <div class="sticker-emoji mb-4" style="font-size: 70px;">${word.emoji}</div>
+                    <div class="text-3xl font-black text-center break-words w-full uppercase" style="color: ${word.color}; -webkit-text-stroke: 1px #1e293b; text-shadow: 2px 2px 0px #1e293b; color: white;">${word.text}</div>
+                    <div class="vote-count" id="counter-${word.id}">${word.votes}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function checkVoteMatchIntelligent(transcript) {
+            const cleanSpoken = normalizeText(transcript);
+            let voteCast = false;
+
+            wordsData.forEach(word => {
+                const regex = new RegExp("\\b" + word.cleanText + "\\b");
+                
+                if (regex.test(cleanSpoken)) {
+                    registerVote(word.id);
+                    voteCast = true;
+                }
+            });
+
+            if(voteCast) {
+                statusBar.classList.replace('bg-emerald-500', 'bg-yellow-400');
+                statusBar.classList.replace('text-white', 'text-slate-900');
+                setTimeout(() => {
+                    if(currentPhase === 2) {
+                        statusBar.classList.replace('bg-yellow-400', 'bg-emerald-500');
+                        statusBar.classList.replace('text-slate-900', 'text-white');
+                    }
+                }, 400);
+            }
+        }
+
+        function registerVote(wordId) {
+            const word = wordsData.find(w => w.id === wordId);
+            if (!word) return;
+
+            word.votes++;
+            
+            const counterEl = document.getElementById(`counter-${wordId}`);
+            counterEl.innerText = word.votes;
+            
+            const cardEl = document.getElementById(`vote-card-${wordId}`);
+            
+            cardEl.classList.remove('bump');
+            counterEl.classList.remove('counter-bump');
+            void cardEl.offsetWidth; 
+            
+            cardEl.classList.add('bump');
+            counterEl.classList.add('counter-bump');
+        }
+
+        function chooseRandomWinner() {
+            if (wordsData.length < 2) {
+                showMessage("¡FALTAN IDEAS!", "Dime al menos 2 cosas para que podamos hacer un sorteo al azar.");
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * wordsData.length);
+            const winner = wordsData[randomIndex];
+            
+            currentPhase = 3;
+            if(isListening) stopListening();
+            
+            btnMic.classList.add('hidden');
+            btnNextPhase.classList.add('hidden');
+            document.getElementById('btn-random-winner').classList.add('hidden');
+            
+            cancelAnimationFrame(animationFrameId);
+            phase1.classList.replace('block', 'hidden');
+            phase2.classList.replace('block', 'hidden'); 
+            phase3.classList.replace('hidden', 'flex');
+            
+            document.getElementById('phase-icon').innerText = '🎲';
+            document.getElementById('phase-title').innerText = '¡SUERTE!';
+            
+            statusBar.innerText = 'FASE 3: ¡El azar ha decidido!';
+            statusBar.className = 'text-center py-3 font-bold text-2xl z-40 border-b-4 border-slate-800 shadow-md bg-orange-500 text-white';
+            
+            document.body.classList.add('confetti-bg');
+            
+            const winnerCard = document.getElementById('winner-card');
+            winnerCard.style.backgroundColor = winner.color;
+            
+            document.getElementById('winner-emoji').innerText = winner.emoji;
+            document.getElementById('winner-text').innerText = winner.text;
+            document.getElementById('winner-votes').innerText = "AZAR"; 
+            
+            setTimeout(() => {
+                winnerCard.classList.remove('scale-0', 'opacity-0', 'rotate-12');
+                winnerCard.classList.add('scale-100', 'opacity-100', 'rotate-0');
+            }, 100);
+        }
+
+        function calculateWinner() {
+            if (wordsData.length === 0) return null;
+            const sortedWords = [...wordsData].sort((a, b) => b.votes - a.votes);
+            if (sortedWords[0].votes === 0) return false; 
+            return sortedWords[0];
+        }
+
+        function nextPhase() {
+            if (currentPhase === 1) {
+                if (wordsData.length < 2) {
+                    showMessage("¡FALTAN IDEAS!", "Dime al menos 2 cosas para que podamos hacer la votación.");
+                    return;
+                }
+                
+                currentPhase = 2;
+                cancelAnimationFrame(animationFrameId);
+                
+                phase1.classList.replace('block', 'hidden');
+                phase2.classList.replace('hidden', 'block');
+                
+                document.getElementById('phase-icon').innerText = '🗳️';
+                document.getElementById('phase-title').innerText = '¡A VOTAR!';
+                statusBar.innerText = 'FASE 2: Di el nombre de la idea para votar (Ej: "Voto por la Manzana")';
+                statusBar.classList.replace('bg-blue-600', 'bg-emerald-500');
+                
+                btnNextPhase.innerHTML = '<span>🏆</span> RESULTADOS';
+                btnNextPhase.classList.replace('bg-emerald-400', 'bg-yellow-400');
+                
+                renderVotingGrid();
+
+            } else if (currentPhase === 2) {
+                const winner = calculateWinner();
+                
+                if (winner === false) {
+                    showMessage("¡CERO VOTOS!", "Tienen que votar por alguna idea antes de ver quién ganó.");
+                    return;
+                }
+                
+                currentPhase = 3;
+                if(isListening) stopListening();
+                btnMic.classList.add('hidden');
+                btnNextPhase.classList.add('hidden');
+                
+                document.getElementById('btn-random-winner').classList.add('hidden');
+                
+                phase2.classList.replace('block', 'hidden');
+                phase3.classList.replace('hidden', 'flex');
+                
+                document.getElementById('phase-icon').innerText = '🎉';
+                document.getElementById('phase-title').innerText = '¡VICTORIA!';
+                statusBar.innerText = 'FASE 3: ¡Tenemos una idea ganadora!';
+                statusBar.classList.replace('bg-emerald-500', 'bg-orange-500');
+                document.body.classList.add('confetti-bg');
+                
+                const winnerCard = document.getElementById('winner-card');
+                winnerCard.style.backgroundColor = winner.color;
+                
+                document.getElementById('winner-emoji').innerText = winner.emoji;
+                document.getElementById('winner-text').innerText = winner.text;
+                document.getElementById('winner-votes').innerText = winner.votes + " VOTOS";
+                
+                setTimeout(() => {
+                    winnerCard.classList.remove('scale-0', 'opacity-0', 'rotate-12');
+                    winnerCard.classList.add('scale-100', 'opacity-100', 'rotate-0');
+                }, 100);
+            }
+        }
+
+        function resetApp() {
+            currentPhase = 1;
+            wordsData = [];
+            nextWordId = 0;
+            
+            phase1.innerHTML = '';
+            document.body.classList.remove('confetti-bg');
+            document.getElementById('winner-card').classList.add('scale-0', 'opacity-0', 'rotate-12');
+            document.getElementById('winner-card').classList.remove('scale-100', 'opacity-100', 'rotate-0');
+            
+            phase3.classList.replace('flex', 'hidden');
+            phase2.classList.replace('block', 'hidden');
+            phase1.classList.replace('hidden', 'block');
+            
+            btnMic.classList.remove('hidden');
+            btnNextPhase.classList.remove('hidden');
+            document.getElementById('btn-random-winner').classList.remove('hidden');
+            
+            document.getElementById('phase-icon').innerText = '🧠';
+            document.getElementById('phase-title').innerText = 'IDEAS GENIALES';
+            
+            statusBar.innerText = 'FASE 1: Enciende el micro y dime tus ideas.';
+            statusBar.className = 'text-center py-3 font-bold text-2xl z-40 border-b-4 border-slate-800 shadow-md bg-blue-600 text-white';
+            
+            btnNextPhase.innerHTML = '<span>➡️</span> A VOTAR';
+            btnNextPhase.classList.replace('bg-yellow-400', 'bg-emerald-400');
+            
+            if(!isListening) startListening();
+        }
+
+        function showMessage(title, text) {
+            document.getElementById('message-title').innerText = title;
+            document.getElementById('message-text').innerText = text;
+            const modal = document.getElementById('message-box');
+            modal.classList.replace('hidden', 'flex');
+        }
+
+        function closeMessage() {
+            const modal = document.getElementById('message-box');
+            modal.classList.replace('flex', 'hidden');
+        }
+
+        document.getElementById('btn-mic').addEventListener('click', toggleMicrophone);
+        document.getElementById('btn-next-phase').addEventListener('click', nextPhase);
+        document.getElementById('btn-random-winner').addEventListener('click', chooseRandomWinner);
+        
+        window.addEventListener('load', initSpeechRecognition);
+    </script>
+</body>
+</html>
