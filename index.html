@@ -7,6 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         body {
@@ -195,6 +196,10 @@
             <button id="btn-random-winner" class="btn-comic bg-purple-500 text-white font-bold py-3 px-8 rounded-full text-2xl flex items-center gap-3">
                 <span>🎲</span> AL AZAR
             </button>
+
+            <button id="btn-export" onclick="exportarEvidencia()" class="btn-comic bg-amber-400 text-slate-900 font-bold py-3 px-6 rounded-full text-2xl flex items-center gap-2">
+                <span>📸</span> EVIDENCIA
+            </button>
         </div>
     </header>
 
@@ -228,6 +233,10 @@
 
         <button onclick="resetApp()" class="btn-comic bg-cyan-400 text-slate-900 font-black py-4 px-12 rounded-full text-3xl flex items-center gap-3 mt-8">
             <span>🔄</span> ¡JUGAR OTRA VEZ!
+        </button>
+
+        <button onclick="exportarEvidencia()" class="btn-comic bg-amber-400 text-slate-900 font-black py-4 px-12 rounded-full text-3xl flex items-center gap-3 mt-4">
+            <span>📸</span> GUARDAR EVIDENCIA
         </button>
     </main>
 
@@ -571,6 +580,7 @@
             btnMic.classList.add('hidden');
             btnNextPhase.classList.add('hidden');
             document.getElementById('btn-random-winner').classList.add('hidden');
+            document.getElementById('btn-export').classList.add('hidden');
             
             cancelAnimationFrame(animationFrameId);
             phase1.classList.replace('block', 'hidden');
@@ -642,6 +652,7 @@
                 btnNextPhase.classList.add('hidden');
                 
                 document.getElementById('btn-random-winner').classList.add('hidden');
+                document.getElementById('btn-export').classList.add('hidden');
                 
                 phase2.classList.replace('block', 'hidden');
                 phase3.classList.replace('hidden', 'flex');
@@ -683,6 +694,7 @@
             btnMic.classList.remove('hidden');
             btnNextPhase.classList.remove('hidden');
             document.getElementById('btn-random-winner').classList.remove('hidden');
+            document.getElementById('btn-export').classList.remove('hidden');
             
             document.getElementById('phase-icon').innerText = '🧠';
             document.getElementById('phase-title').innerText = 'IDEAS GENIALES';
@@ -708,6 +720,51 @@
             modal.classList.replace('flex', 'hidden');
         }
 
+        async function exportarEvidencia() {
+            const barra = document.getElementById('status-bar');
+            const textoPrevio = barra.innerText;
+            barra.innerText = '📸 Generando imagen de evidencia pedagógica...';
+
+            try {
+                // Obtenemos fecha y hora para el nombre del archivo
+                const ahora = new Date();
+                const fechaTexto = ahora.toISOString().slice(0, 10);
+                const horaTexto = `${ahora.getHours()}-${ahora.getMinutes()}`;
+                
+                let tipo = 'ideas';
+                if (currentPhase === 2) tipo = 'votacion';
+                if (currentPhase === 3) tipo = 'ganador';
+
+                // Generamos la captura de la pantalla actual en alta definición (scale: 2)
+                const canvas = await html2canvas(document.body, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: null,
+                    ignoreElements: (el) => {
+                        return el.id === 'message-box' || el.id === 'splash-screen';
+                    }
+                });
+
+                // Descarga automática como archivo PNG
+                const enlace = document.createElement('a');
+                enlace.download = `evidencia_${tipo}_${fechaTexto}_${horaTexto}.png`;
+                enlace.href = canvas.toDataURL('image/png');
+                enlace.click();
+
+                barra.innerText = '✅ ¡Evidencia guardada como imagen con éxito!';
+                setTimeout(() => {
+                    barra.innerText = textoPrevio;
+                }, 2200);
+            } catch (err) {
+                console.error("Error al exportar:", err);
+                barra.innerText = '⚠️ Ocurrió un error al generar la imagen.';
+                setTimeout(() => {
+                    barra.innerText = textoPrevio;
+                }, 2200);
+            }
+        }
+
+        // Eventos
         document.getElementById('btn-mic').addEventListener('click', toggleMicrophone);
         document.getElementById('btn-next-phase').addEventListener('click', nextPhase);
         document.getElementById('btn-random-winner').addEventListener('click', chooseRandomWinner);
